@@ -9,6 +9,7 @@ from typing import Mapping
 
 import attrs
 
+from pydwarfs.exceptions import InvalidDwarFSImageFile
 from pydwarfs.utils import get_mount_point
 
 try:
@@ -21,7 +22,10 @@ try:
 except ImportError:
     from typing_extensions import Self
 
-__all__ = ['DwarFS', 'DwarFSMountOptions', 'IsAMountPointError', 'NotAMountPointError', 'DwarfsUnmountError']
+__all__ = [
+    'DwarFS', 'DwarFSMountOptions',
+    'IsAMountPointError', 'NotAMountPointError', 'DwarFSMountError', 'DwarFSUnmountError'
+]
 
 
 class IsAMountPointError(OSError):
@@ -32,7 +36,11 @@ class NotAMountPointError(OSError):
     pass
 
 
-class DwarfsUnmountError(Exception):
+class DwarFSMountError(Exception):
+    pass
+
+
+class DwarFSUnmountError(Exception):
     pass
 
 
@@ -171,40 +179,26 @@ def _validate_field_executable(__, ___, value: str) -> None:
 
 @attrs.define(kw_only=True, slots=True)
 class DwarFS:
+    """A class representing a DwarFS filesystem.
+
+    Attributes:
+        executable (str): The path to the ``dwarfs`` executable.
     """
-    The `DwarFS` class provides methods for mounting and unmounting DwarFS filesystems.
-
-    Example Usage:
-    ```python
-    # Initialize DwarFS object
-    dwarfs = DwarFS.init()
-
-    # Mount a DwarFS filesystem
-    dwarfs.mount('/path/to/image', '/path/to/mountpoint')
-
-    # Unmount a DwarFS filesystem
-    dwarfs.unmount('/path/to/mountpoint')
-    ```
-
-    Fields:
-    - `executable: str`: The path to the DwarFS executable. It is required when initializing the `DwarFS` object.
-    """
-
     executable: str = attrs.field(converter=os.fsdecode, validator=_validate_field_executable)
 
     @classmethod
     def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
-        """
-        Class method that initializes the `DwarFS` object.
+        """Initialize a DwarFS object.
 
-        Args:
-        - alter_executable: The path to the DwarFS executable. If not provided, it searches for the DwarFS executable in the system's $PATH.
+        Parameters:
+            alter_executable (str | bytes | os.PathLike | None, optional): Path to the `dwarfs` executable.
+                If not provided, the executable will be searched for in the system $PATH. Defaults to `None`.
 
         Returns:
-        - The initialized `DwarFS` object.
+            DwarFS: A DwarFS object initialized with the specified executable.
 
         Raises:
-        - FileNotFoundError: If the DwarFS executable is not found in the system $PATH.
+            FileNotFoundError: If no `dwarfs` executable is found in the system $PATH.
         """
         if alter_executable is None:
             executable = shutil.which('dwarfs') or shutil.which('dwarfs2')
@@ -220,39 +214,33 @@ class DwarFS:
               mountpoint: str | bytes | os.PathLike,
               options: DwarFSMountOptions | Mapping[str, Any] | None = None,
               **kw_options
-              ) -> subproc.CompletedProcess:
-        """
-        Mounts a DwarFS filesystem to the specified mountpoint.
+              ) -> None:
+        """Mounts a DwarFS image file to a specified mountpoint.
 
-        Args:
-        - image: The path to the DwarFS image file.
-        - mountpoint: The path to the mountpoint directory.
-        - options: The options for mounting the DwarFS filesystem. It can be an instance of `DwarFSMountOptions` or a mapping of options.
-        - **kw_options: Additional options passed as keyword arguments.
-
-        Returns:
-        - The `subproc.CompletedProcess` object representing the completed mount process.
+        Parameters:
+            image (str | bytes | os.PathLike): The path to the DwarFS image file.
+            mountpoint (str | bytes | os.PathLike): The path to the mountpoint where the DwarFS filesystem will be mounted.
+            options (DwarFSMountOptions | Mapping[str, Any] | None, optional): Mount options for the DwarFS filesystem. Defaults to None.
+            **kw_options: Additional keyword arguments for the DwarFSMountOptions.
 
         Raises:
-        - FileNotFoundError: If the image file or mountpoint does not exist.
-        - IsADirectoryError: If the image file is a directory.
-        - PermissionError: If the image file or mountpoint is not accessible.
+            InvalidDwarFSImageFile: If the specified image file is not a valid DwarFS image file.
+            IsAMountPointError: If the specified mountpoint is already mounted as another filesystem.
+            FileNotFoundError: If the specified mountpoint does not exist.
+            NotADirectoryError: If the specified mountpoint is not a directory.
+            PermissionError: If the specified mountpoint is not accessible for reading.
+            DwarFSMountError: If the mount operation fails.
         """
-        # Checking image accessibility
         image = os.fsdecode(image)
-        if not os.path.exists(image):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), image)
-        elif os.path.isdir(image):
-            raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), image)
-        elif not os.access(image, os.R_OK):
-            raise PermissionError(errno.EPERM, os.strerror(errno.EPERM), image)
+        with open(image, mode='rb') as f:
+            if f.read(6) != b'DWARFS':
+                raise InvalidDwarFSImageFile(f'Not a valid DwarFS image file: {image!r}')
 
-        # Checking mountpoint accessibility
         mountpoint = os.fsdecode(mountpoint)
-        if not os.path.exists(mountpoint):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), mountpoint)
-        elif os.path.ismount(mountpoint):
+        if os.path.ismount(mountpoint):
             raise IsAMountPointError(f'Already mounted as other filesystem: {mountpoint!r}')
+        elif not os.path.exists(mountpoint):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), mountpoint)
         elif not os.path.isdir(mountpoint):
             raise NotADirectoryError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), mountpoint)
         elif not os.access(mountpoint, os.R_OK | os.W_OK | os.X_OK):
@@ -269,29 +257,28 @@ class DwarFS:
 
         cmdline.extend(options_instance)
 
-        return subproc.run(cmdline, check=True)
+        try:
+            subproc.run(cmdline, check=True)
+        except subproc.CalledProcessError:
+            raise DwarFSMountError(f'Failed to mount the image file {image!r} to {mountpoint!r}')
 
     def unmount(self, mountpoint: str | bytes | os.PathLike,
                 *, method: Literal['umount', 'fusermount'] = 'fusermount',
                 lazy_unmount: bool = False
-                ) -> subproc.CompletedProcess:
-        """
-        Unmounts a DwarFS filesystem from the specified mountpoint.
+                ) -> None:
+        """Unmounts a DwarFS filesystem from a specified mountpoint.
 
-        Args:
-        - mountpoint: The path to the mountpoint directory.
-        - method: The unmount method. It can be either 'umount' or 'fusermount'. Default is 'fusermount'.
-        - lazy_unmount: Whether to perform a lazy unmount. Default is False.
-
-        Returns:
-        - The `subproc.CompletedProcess` object representing the completed unmount process.
+        Parameters:
+            mountpoint (str | bytes | os.PathLike): The path to the mountpoint where the DwarFS filesystem is mounted.
+            method (Literal['umount', 'fusermount'], optional): The method to use for unmounting. Defaults to ``'fusermount'``.
+            lazy_unmount (bool, optional): If True, performs a lazy unmount. Defaults to ``False``.
 
         Raises:
-        - FileNotFoundError: If the mountpoint does not exist.
-        - NotAMountPointError: If the mountpoint is not a valid DwarFS mountpoint.
-        - DwarfsUnmountError: If the mountpoint is not a DwarFS filesystem mountpoint.
-        - ValueError: If the unmount method is not 'umount' or 'fusermount'.
-        - TypeError: If the unmount method is not a string.
+            NotAMountPointError: If the specified mountpoint is not a valid mountpoint,
+                or the specified mountpoint is not a valid mountpoint.
+            DwarFSUnmountError: If the specified mountpoint is not a DwarFS filesystem mountpoint,
+                or the unmount operation fails.
+            FileNotFoundError: If the specified mountpoint does not exist.
         """
         if method == 'fusermount':
             if self.executable.endswith('2'):
@@ -310,8 +297,6 @@ class DwarFS:
             raise TypeError(f"'method' must be either 'umount' or 'fusermount' (got {type(method)!r})")
 
         mountpoint = os.fsdecode(mountpoint)
-        if not os.path.exists(mountpoint):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), mountpoint)
         if not os.path.ismount(mountpoint):
             raise NotAMountPointError(f'Not a mountpoint: {mountpoint!r}')
         else:
@@ -319,8 +304,13 @@ class DwarFS:
             if not mountpoint_info:
                 raise NotAMountPointError(f'Not a mountpoint: {mountpoint!r}')
             if mountpoint_info.fstype != 'fuse.dwarfs':
-                raise DwarfsUnmountError(f'Not a DwarFS filesystem mountpoint: {mountpoint!r}')
+                raise DwarFSUnmountError(f'Not a DwarFS filesystem mountpoint: {mountpoint!r}')
+        if not os.path.exists(mountpoint):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), mountpoint)
 
         cmdline.append(mountpoint)
 
-        return subproc.run(cmdline, check=True)
+        try:
+            subproc.run(cmdline, check=True)
+        except subproc.CalledProcessError:
+            raise DwarFSUnmountError(f'Failed to unmount: {mountpoint!r}')

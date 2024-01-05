@@ -35,6 +35,7 @@ In the default case, `Dwarfs.init()` will find the location of `dwarfs` command 
 >>> dwarfs = Dwarfs.init()
 >>> dwarfs.executable
 '/usr/bin/dwarfs'
+>>>
 ```
 
 If the DwarFS command line utilities are not installed, you can specify a location of `dwarfs` command instead.
@@ -44,13 +45,13 @@ If the DwarFS command line utilities are not installed, you can specify a locati
 >>> dwarfs = Dwarfs.init('/path/to/valid/dwarfs')
 >>> dwarfs.executable
 '/path/to/valid/dwarfs'
+>>>
 ```
 
 #### A simple mount
 
 ```pycon
 >>> dwarfs.mount('/path/to/source.dwarfs', '/path/to/destination/directory')
-CompletedProcess(args=['/usr/bin/dwarfs', '/path/to/source.dwarfs', '/path/to/destination/directory'], returncode=0)
 >>>
 ```
 
@@ -69,7 +70,6 @@ D 04:06:32.182927 [filesystem_v2.cpp:493] section BLOCK @ 64 [16,669,939 bytes]
 ...
 D 04:06:32.191025 [filesystem_v2.cpp:515] read 734 blocks and 175,158 bytes of metadata
 I 04:06:32.191041 [dwarfs_main.cpp:1144] file system initialized [8.624ms]
-CompletedProcess(args=['/usr/bin/dwarfs', '/path/to/source.1.dwarfs', '/path/to/destination/directory.1', '-o', 'cachesize=32M', '-o', 'readonly', '-o', 'debuglevel=debug'], returncode=0)
 >>>
 ```
 
@@ -86,7 +86,6 @@ D 04:14:01.983753 [filesystem_v2.cpp:493] section BLOCK @ 64 [67,097,028 bytes]
 ...
 D 04:14:01.984644 [filesystem_v2.cpp:515] read 7 blocks and 2,755 bytes of metadata
 I 04:14:01.984656 [dwarfs_main.cpp:1144] file system initialized [3.27ms]
-CompletedProcess(args=['/usr/bin/dwarfs', '/path/to/source.2.dwarfs', '/path/to/destination/directory.2', '-o', 'cachesize=16M', '-o', 'readonly', '-o', 'debuglevel=debug'], returncode=0)
 >>>
 ```
 
@@ -94,7 +93,6 @@ CompletedProcess(args=['/usr/bin/dwarfs', '/path/to/source.2.dwarfs', '/path/to/
 
 ```pycon
 >>> dwarfs.unmount('/path/to/destination/directory')
-CompletedProcess(args=['fusermount3', '-u', '/path/to/destination/directory'], returncode=0)
 >>>
 ```
 
@@ -102,7 +100,6 @@ Unmount by the method `umount` instead of the default `fusermount`:
 
 ```pycon
 >>> dwarfs.unmount('/path/to/destination/directory.1', method='umount')
-CompletedProcess(args=['umount', '/path/to/destination/directory.1'], returncode=0)
 >>>
 ```
 
@@ -110,6 +107,5 @@ You can forcely unmount by add the argument `lazy_unmount=True`:
 
 ```pycon
 >>> dwarfs.unmount('/path/to/destination/directory.2', lazy_unmount=True)
-CompletedProcess(args=['fusermount3', '-u', '-z', '/path/to/destination/directory.2'], returncode=0)
 >>>
 ```
