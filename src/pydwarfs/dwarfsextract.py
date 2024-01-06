@@ -98,8 +98,10 @@ class DwarFSExtract:
             disable_integrity_check (bool): Whether to disable integrity checks during extraction. Default is False.
             yield_progress (bool): Whether to yield progress updates during extraction.
                 Default is False.
-            workers (int | None): The number of worker processes to use for extraction. Default is None.
-            cache_size (str | None): The size of the cache used during extraction. Default is None.
+            workers (int | None): The number of worker threads to use for extraction. Default is None.
+            cache_size (str | None): Size of the block cache, in bytes.
+                You can append suffixes (k, m, g) to specify the size in KiB, MiB and GiB, respectively.
+                Default is None.
             log_level (Literal['error', 'warn', 'info', 'debug', 'trace'] | None):
                 The log level for the extraction process. Default is None.
 
