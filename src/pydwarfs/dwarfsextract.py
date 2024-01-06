@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- encoding: utf-8 -*-
 import errno
 import io
 import os
@@ -27,10 +27,24 @@ class DwarFSExtractError(Exception):
 
 @attrs.define(kw_only=True, slots=True)
 class DwarFSExtract:
+    """Class representing a DwarFS image extractor.
+
+    Attributes:
+        executable (str): The path to the 'dwarfsextract' executable.
+    """
     executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executable_field('dwarfsextract'))
 
     @classmethod
     def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
+        """Initializes a new instance of the DwarFSExtract class.
+
+        Parameters:
+            alter_executable (str | bytes | os.PathLike | None): The alternative path to the
+                'dwarfsextract' executable. Default is None.
+
+        Returns:
+            A new instance of the DwarFSExtract class.
+        """
         if alter_executable is None:
             executable = shutil.which('dwarfsextract')
             if executable is None:
@@ -72,6 +86,31 @@ class DwarFSExtract:
                 *, image_offset=None, continue_on_error=False, disable_integrity_check=False,
                 yield_progress=False, workers=None, cache_size=None, log_level=None
                 ):
+        """
+        Extracts a DwarFS image file.
+
+        Parameters:
+            image (str | bytes | os.PathLike): The path to the input DwarFS image file.
+            output (str | bytes | os.PathLike): The path to the output directory where the extracted files will be saved.
+            image_offset (int | Literal['auto'] | None): The offset of the image file, or 'auto'
+                to automatically determine the offset. Default is None.
+            continue_on_error (bool): Whether to continue extraction even if errors occur. Default is False.
+            disable_integrity_check (bool): Whether to disable integrity checks during extraction. Default is False.
+            yield_progress (bool): Whether to yield progress updates during extraction.
+                Default is False.
+            workers (int | None): The number of worker threads to use for extraction. Default is None.
+            cache_size (str | None): Size of the block cache, in bytes.
+                You can append suffixes (k, m, g) to specify the size in KiB, MiB and GiB, respectively.
+                Default is None.
+            log_level (Literal['error', 'warn', 'info', 'debug', 'trace'] | None):
+                The log level for the extraction process. Default is None.
+
+        Returns:
+            If yield_progress is True, a generator that yields progress updates as integers.
+
+            If yield_progress is False, None if the extraction process completes successfully.
+            Otherwise, a DwarFSExtractError exception is raised.
+        """
         image = os.path.abspath(os.fsdecode(image))
         with open(image, mode='rb') as f:
             if f.read(6) != b'DWARFS':
