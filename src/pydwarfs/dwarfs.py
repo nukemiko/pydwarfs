@@ -10,6 +10,7 @@ from typing import Mapping
 import attrs
 
 from pydwarfs.exceptions import InvalidDwarFSImageFile
+from pydwarfs.utils import AttrFieldValidatorFactory as AFVF
 from pydwarfs.utils import get_mount_point
 
 try:
@@ -166,17 +167,6 @@ class DwarFSMountOptions:
         return yield_options()
 
 
-def _validate_field_executable(__, ___, value: str) -> None:
-    if not os.path.exists(value):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), value)
-    elif os.path.isdir(value):
-        raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), value)
-    elif not os.access(value, os.X_OK):
-        raise PermissionError(errno.EPERM, os.strerror(errno.EPERM), value)
-    elif not (basename := os.path.basename(value)) in ('dwarfs', 'dwarfs2'):
-        raise ValueError(f'Invalid executable file name: {basename!r}')
-
-
 @attrs.define(kw_only=True, slots=True)
 class DwarFS:
     """A class representing a DwarFS filesystem.
@@ -184,7 +174,7 @@ class DwarFS:
     Attributes:
         executable (str): The path to the ``dwarfs`` executable.
     """
-    executable: str = attrs.field(converter=os.fsdecode, validator=_validate_field_executable)
+    executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executable_field(('dwarfs', 'dwarfs2')))
 
     @classmethod
     def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
@@ -203,7 +193,7 @@ class DwarFS:
         if alter_executable is None:
             executable = shutil.which('dwarfs') or shutil.which('dwarfs2')
             if executable is None:
-                raise FileNotFoundError('Could not find any dwarfs executable in the system $PATH')
+                raise FileNotFoundError('Could not find any executable named {!s} in the system $PATH'.format("'dwarfs' or 'dwarfs2'"))
         else:
             executable = alter_executable
 
@@ -231,12 +221,12 @@ class DwarFS:
             PermissionError: If the specified mountpoint is not accessible for reading.
             DwarFSMountError: If the mount operation fails.
         """
-        image = os.fsdecode(image)
+        image = os.path.abspath(os.fsdecode(image))
         with open(image, mode='rb') as f:
             if f.read(6) != b'DWARFS':
                 raise InvalidDwarFSImageFile(f'Not a valid DwarFS image file: {image!r}')
 
-        mountpoint = os.fsdecode(mountpoint)
+        mountpoint = os.path.abspath(os.fsdecode(mountpoint))
         if os.path.ismount(mountpoint):
             raise IsAMountPointError(f'Already mounted as other filesystem: {mountpoint!r}')
         elif not os.path.exists(mountpoint):
@@ -296,7 +286,7 @@ class DwarFS:
         else:
             raise TypeError(f"'method' must be either 'umount' or 'fusermount' (got {type(method)!r})")
 
-        mountpoint = os.fsdecode(mountpoint)
+        mountpoint = os.path.abspath(os.fsdecode(mountpoint))
         if not os.path.ismount(mountpoint):
             raise NotAMountPointError(f'Not a mountpoint: {mountpoint!r}')
         else:

@@ -9,8 +9,8 @@ DwarFS is stands for **Deduplicating Warp-speed Advanced Read-only File System**
 ## Features / TODO
 
 - [x] Mount/unmount a DwarFS image file to specified mountpoint (`dwarfs`/`mount.dwarfs`)
+- [x] Extract a DwarFS image file (`dwarfsextract`, initially implemented)
 - [ ] Create a DwarFS image file (`mkdwarfs`)
-- [ ] Extract a DwarFS image file (`dwarfsextract`)
 - [ ] Check a DwarFS image file (`dwarfsck`)
 - [ ] Performance test (`dwarfsbench`)
 
@@ -53,6 +53,15 @@ If the DwarFS command line utilities are not installed, you can specify a locati
 ```pycon
 >>> dwarfs.mount('/path/to/source.dwarfs', '/path/to/destination/directory')
 >>>
+```
+
+To check if the mount was actually successful, exit the Python REPL and run the following command:
+
+```sh-session
+$ > findmnt /path/to/destination/directory
+TARGET                         SOURCE FSTYPE      OPTIONS
+/path/to/destination/directory dwarfs fuse.dwarfs rw,nosuid,nodev,relatime,user_id=1000,group_id=1000
+$ >
 ```
 
 #### Mount with some specified options
@@ -107,5 +116,42 @@ You can forcely unmount by add the argument `lazy_unmount=True`:
 
 ```pycon
 >>> dwarfs.unmount('/path/to/destination/directory.2', lazy_unmount=True)
+>>>
+```
+
+### Extract a DwarFS image file
+
+#### A simple extraction
+
+```pycon
+>>> import os
+>>> from pydwarfs.dwarfsextract import DwarFSExtract
+>>> dwarfsextract = DwarFSExtract.init()
+>>> output_dir = '/path/to/dest/directory'
+>>> dwarfsextract.extract('/path/to/image.dwarfs', output_dir)
+>>>
+>>> os.listdir(output_dir)
+['dataWin', 'Sakuna.exe', 'steam_appid.txt', 'xaudio2_9redist.dll', ...]
+>>>
+```
+
+**Note:** The path pointed to by `output_dir` must be an existing directory.
+
+#### Extract image file with progress
+
+```pycon
+>>> another_output_dir = '/path/to/another/output/directory'
+>>> for progress in dwarfsextract.extract('/path/to/image.dwarfs', another_output_dir, yield_progress=True):
+...     print(progress)
+...
+100
+99
+98
+...
+2
+1
+0
+>>> os.listdir(another_output_dir)
+['dataWin', 'Sakuna.exe', 'steam_appid.txt', 'xaudio2_9redist.dll', ...]
 >>>
 ```

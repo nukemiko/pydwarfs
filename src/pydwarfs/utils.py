@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import errno
 import os
 from pathlib import PosixPath as Path
+from typing import Any
+from typing import Callable
 from typing import Iterator
 
 import attrs
@@ -10,7 +13,7 @@ try:
 except ImportError:
     from typing_extensions import Self
 
-__all__ = ['MountPoint', 'get_all_mount_points', 'get_mount_point']
+__all__ = ['MountPoint', 'get_all_mount_points', 'get_mount_point', 'AttrFieldValidatorFactory']
 
 
 @attrs.frozen(slots=True, kw_only=True)
@@ -44,7 +47,7 @@ class MountPoint:
             raise ValueError(f'Invalid value of fs_passno: {raw_fs_passno!r}')
         fs_passno = int(raw_fs_passno)
 
-        target = Path(str(bytes(fs_file, encoding='raw_unicode_escape'), encoding='unicode_escape'))
+        target = Path(str(bytes(fs_file, encoding='raw_unicode_escape'), encoding='unicode_escape')).resolve()
 
         return cls(source=fs_spec, target=target, fstype=fs_vfstype, options=fs_mntops, freq=fs_freq, passno=fs_passno)
 
@@ -62,7 +65,29 @@ def get_all_mount_points() -> list[MountPoint]:
 
 
 def get_mount_point(fs_file: str | bytes | os.PathLike) -> MountPoint | None:
-    fs_file_path = Path(os.fsdecode(fs_file))
+    fs_file_path = Path(os.fsdecode(fs_file)).resolve()
     for mount_point in _iter_get_all_mounts_points():
-        if mount_point.target.resolve() == fs_file_path.resolve():
+        if mount_point.target.resolve() == fs_file_path:
             return mount_point
+
+
+class AttrFieldValidatorFactory:
+    @staticmethod
+    def executable_field(basename: str | tuple[str, ...]) -> Callable[[Any, attrs.Attribute, Any], None]:
+        def validator(__: Any, ___: attrs.Attribute, value: Any) -> None:
+            if not os.path.exists(value):
+                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), value)
+            elif os.path.isdir(value):
+                raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), value)
+            elif not os.access(value, os.X_OK):
+                raise PermissionError(errno.EPERM, os.strerror(errno.EPERM), value)
+
+            actual_basename = os.path.basename(value).lower()
+            if isinstance(basename, tuple):
+                basenames: list[str] = [s.lower() for s in basename]
+                if actual_basename not in basenames:
+                    raise ValueError(f'Executable name must be one of the following: {basenames!r} (got {actual_basename!r})')
+            elif actual_basename != basename.lower():
+                raise ValueError(f'Executable name must be {basename!r} (got {actual_basename!r}')
+
+        return validator
