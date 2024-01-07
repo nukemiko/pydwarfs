@@ -16,7 +16,7 @@ __all__ = ['AttrFieldValidatorFactory']
 
 class AttrFieldValidatorFactory:
     @staticmethod
-    def executable_field(basename: str | tuple[str, ...]) -> Callable[[Any, attrs.Attribute, Any], None]:
+    def executableField(basename: str | tuple[str, ...]) -> Callable[[Any, attrs.Attribute, Any], None]:
         def validator(__: Any, ___: attrs.Attribute, value: Any) -> None:
             if not os.path.exists(value):
                 raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), value)

@@ -162,7 +162,7 @@ class DwarFS:
     Attributes:
         executable (str): The path to the ``dwarfs`` executable.
     """
-    executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executable_field(('dwarfs', 'dwarfs2')))
+    executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executableField(('dwarfs', 'dwarfs2')))
 
     @classmethod
     def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
