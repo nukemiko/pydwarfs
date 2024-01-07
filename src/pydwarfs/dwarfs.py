@@ -5,6 +5,7 @@ import shutil
 import subprocess as subproc
 from typing import Any
 from typing import Iterator
+from typing import Literal
 from typing import Mapping
 
 import attrs
@@ -13,20 +14,7 @@ import mntfinder
 from pydwarfs.exceptions import InvalidDwarFSImageFile
 from pydwarfs.utils import AttrFieldValidatorFactory as AFVF
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
-
-__all__ = [
-    'DwarFS', 'DwarFSMountOptions',
-    'DwarFSError'
-]
+__all__ = ['DwarFS', 'DwarFSMountOptions', 'DwarFSError']
 
 
 class DwarFSError(Exception):
@@ -165,7 +153,7 @@ class DwarFS:
     executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executableField(('dwarfs', 'dwarfs2')))
 
     @classmethod
-    def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
+    def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> 'DwarFS':
         """Initialize a DwarFS object.
 
         Parameters:
