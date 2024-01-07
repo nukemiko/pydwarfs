@@ -8,6 +8,7 @@ from typing import Iterator
 from typing import Mapping
 
 import attrs
+import mntfinder
 
 from pydwarfs.exceptions import InvalidDwarFSImageFile
 from pydwarfs.utils import AttrFieldValidatorFactory as AFVF
@@ -198,6 +199,14 @@ class DwarFS:
             executable = alter_executable
 
         return cls(executable=executable)
+
+    @staticmethod
+    def isDwarFSMountPoint(target: str | bytes | os.PathLike) -> bool:
+        return mntfinder.isMountPoint(target, fstype='fuse.dwarfs')
+
+    @staticmethod
+    def listAllDwarFSMountPoints() -> list[mntfinder.MountPoint]:
+        return mntfinder.listAllMountPoints(fstype='fuse.dwarfs')
 
     def mount(self,
               image: str | bytes | os.PathLike,
