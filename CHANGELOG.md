@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Simplified Chinese version at [here](https://semver.org/lang/zh-CN/spec/v2.0.0.html).
 
-## <span id="changelog-20240107-0-3-0">0.3.0 - 2024-01-07</span>
+## 0.3.1 - 2024-01-08
+
+- Removed dependency `typing-extensions`.
+- Bumped the version of dependency `mntfinder` from `~=0.1.0` -> `>=0.1.1`.
+
+## 0.3.0 - 2024-01-07
 
 This version contains some **BREAKING changes**:
 
