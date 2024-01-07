@@ -13,11 +13,6 @@ import attrs
 from pydwarfs.exceptions import InvalidDwarFSImageFile
 from pydwarfs.utils import AttrFieldValidatorFactory as AFVF
 
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
-
 __all__ = ['DwarFSExtract', 'DwarFSExtractError']
 
 
@@ -35,7 +30,7 @@ class DwarFSExtract:
     executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executableField('dwarfsextract'))
 
     @classmethod
-    def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
+    def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> 'DwarFSExtract':
         """Initializes a new instance of the DwarFSExtract class.
 
         Parameters:

@@ -1,3 +1,2 @@
 attrs
-typing-extensions
-mntfinder~=0.1.0
+mntfinder>=0.1.1

@@ -6,11 +6,6 @@ from typing import Callable
 
 import attrs
 
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
-
 __all__ = ['AttrFieldValidatorFactory']
 
 
