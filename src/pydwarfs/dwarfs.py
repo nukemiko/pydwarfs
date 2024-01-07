@@ -30,11 +30,7 @@ __all__ = [
 ]
 
 
-class IsAMountPointError(OSError):
-    pass
-
-
-class NotAMountPointError(OSError):
+class DwarFSError(Exception):
     pass
 
 
@@ -280,10 +276,10 @@ class DwarFS:
             FileNotFoundError: If the specified mountpoint does not exist.
         """
         if method == 'fusermount':
-            if self.executable.endswith('2'):
-                cmdline = ['fusermount', '-u']
-            else:
-                cmdline = ['fusermount3', '-u']
+            fusermount_path = shutil.which('fusermount') or shutil.which('fusermount3')
+            if not fusermount_path:
+                raise DwarFSError(f'Cannot find fusermount or fusermount3 to unmount {mountpoint!r}')
+            cmdline = [fusermount_path, '-u']
             if lazy_unmount:
                 cmdline.append('-z')
         elif method == 'umount':
