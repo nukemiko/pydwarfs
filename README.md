@@ -26,6 +26,27 @@ The following examples are for the more common uses of command line utilities.
 
 ### Mount/unmount a DwarFS image file to specified mountpoint
 
+#### Check if a path is a DwarFS mountpoint
+
+```pycon
+>>> from pydwarfs.dwarfs import DwarFS
+>>> DwarFS.isDwarFSMountPoint(this_is_dwarfs_mnt)
+True
+>>> DwarFS.isDwarFSMountPoint('/path/to/non-mnt')
+False
+>>> DwarFS.isDwarFSMountPoint('/proc')  # Obviously not a DwarFS mountpoint
+False
+>>>
+```
+
+#### List all of DwarFS mountpoint
+
+```pycon
+>>> DwarFS.listAllDwarFSMountPoints()
+[MountPoint(source='dwarfs', target=PosixPath('/path/to/dwarfs/image/mountpoint'), fstype='fuse.dwarfs', options=('rw', 'nosuid', 'nodev', 'relatime', 'user_id=1000', 'group_id=1000'), freq=0, passno=0), ...]
+>>>
+```
+
 #### Create a `DwarFS` instance
 
 In the default case, `Dwarfs.init()` will find the location of `dwarfs` command via `shutil.which()`.
@@ -40,7 +61,7 @@ In the default case, `Dwarfs.init()` will find the location of `dwarfs` command 
 
 If the DwarFS command line utilities are not installed, you can specify a location of `dwarfs` command instead.
 
-```
+```pycon
 >>> from pydwarfs.dwarfs import DwarFS
 >>> dwarfs = Dwarfs.init('/path/to/valid/dwarfs')
 >>> dwarfs.executable

@@ -32,7 +32,7 @@ class DwarFSExtract:
     Attributes:
         executable (str): The path to the 'dwarfsextract' executable.
     """
-    executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executable_field('dwarfsextract'))
+    executable: str = attrs.field(converter=os.fsdecode, validator=AFVF.executableField('dwarfsextract'))
 
     @classmethod
     def init(cls, alter_executable: str | bytes | os.PathLike | None = None) -> Self:
